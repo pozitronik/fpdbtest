@@ -9,7 +9,7 @@ use mysqli;
 /**
  * Class Database
  * @public string $valueQuoteCharacter Строка, используемая для экранирования строк в значениях
- * @public string $fieldQuoteCharacter Строка, используемая для экранирования строк в ключах
+ * @public string $identifierQuoteCharacter Строка, используемая для экранирования строк в идентификаторах
  * @public bool $allowMarkerEscape true: разрешает экранирование символа '?' как '??'. false: подстановка производится всегда
  * @public mixed $ignoreMarker Значение, используемое, как skip-маркер
  */
@@ -17,9 +17,9 @@ class Database implements DatabaseInterface
 {
 
     public string $valueQuoteCharacter = "'";
-    public string $fieldQuoteCharacter = "`";
+    public string $identifierQuoteCharacter = "`";
     public bool $allowMarkerEscape = true;
-    public mixed$skipMarker = '/*!IGNORE!*/';
+    public mixed $skipMarker = '/*!IGNORE!*/';
 
     private mysqli|null $mysqli = null;
 
@@ -75,13 +75,13 @@ class Database implements DatabaseInterface
                     $result .= (float)$value;
                     break;
                 case 'a':
-                    $result .= $this->formatIdentifier($value);
+                    $result .= $this->formatArray($value);
                     break;
                 case '#':  // согласно условию, токен применим только и идентификаторам, но не значениям
                     $result .= $this->formatIdentifier($value);
                     break;
                 default:
-                    $result .= $this->formatValue($value);
+                    $result .= $this->formatScalar($value);
                     --$pos; //корректировка сдвига
                     break;
             }
@@ -91,65 +91,81 @@ class Database implements DatabaseInterface
     }
 
     /**
-     * @param string|int|float|bool|null $value
+     * Форматирует и, при необходимости, экранирует скалярное (+null) значение в соответствии с заданными правилами
+     * @param string|int|float|bool|null $scalar Форматируемое значение
+     * @param bool $isIdentifier Значение используется в идентификаторе (влияет на экранирование)
      * @return string
+     * @example
+     *      formatValue("abc") => 'abc'
+     *      formatValue("abc", true) => `abc`
+     *      formatValue(1) => 1
+     *      formatValue(3.14) => 3.14
+     *      formatValue(true) => 1
+     *      formatValue(false) => 0
+     *      formatValue(null) => NULL
      */
-    private function formatValue(string|int|float|bool|null $value): string
+    private function formatScalar(string|int|float|bool|null $scalar, bool $isIdentifier = false): string
     {
-        if (null === $value) {
+        if (null === $scalar) {
             return 'NULL';
         }
 
-        if (is_bool($value)) {
-            return $value ? '1' : '0';
+        if (is_bool($scalar)) {
+            return $scalar ? '1' : '0';
         }
 
-        if (!is_numeric($value)) {
-            return "{$this->valueQuoteCharacter}{$value}{$this->valueQuoteCharacter}";
+        if (!is_numeric($scalar)) {
+            return $isIdentifier ? $this->quoteIdentifier($scalar) : $this->quoteValue($scalar);
         }
 
-        return (string)$value;
+        return (string)$scalar;
     }
 
     /**
-     * @param array $value
+     * Форматирует данные массива в соответствии с заданными правилами
+     * Для ассоциативных массивов ключи всегда экранируются
+     * @param array $array Форматируемый массив
+     * @param bool $isIdentifier Данные используются в идентификаторе (влияет на экранирование)
      * @return string
      */
-    private function formatArrayValue(array $value): string
+    private function formatArray(array $array, bool $isIdentifier = false): string
     {
-        return implode(', ', array_map([$this, 'formatValue'], $value));
+        if ($this->isAssoc($array)) {
+            $resultPairs = [];
+            foreach ($array as $key => $value) {
+                if (is_array($value)) { // IN
+                    $resultPairs[] = "{$this->quoteIdentifier($key)} IN ({$this->formatArrayValue($value)})";
+                } else { // =
+                    $resultPairs[] = "{$this->quoteIdentifier($key)} = {$this->formatScalar($value)}";
+                }
+            }
+            return $isIdentifier ? implode(', ', array_map([$this, 'quoteIdentifier'], $array)) : implode(', ', $resultPairs);
+        }
+        return $this->formatArrayValue($array, $isIdentifier);
     }
 
     /**
-     * @param string $fieldName
+     * Форматирует значения (но не ключи) массива в соответствии с заданными правилами
+     * @param array $value Форматируемый массив
+     * @param bool $isIdentifier Значения используются в идентификаторе (влияет на экранирование)
      * @return string
      */
-    private function quoteFieldName(string $fieldName): string
+    private function formatArrayValue(array $value, bool $isIdentifier = false): string
     {
-        return "{$this->fieldQuoteCharacter}{$fieldName}{$this->fieldQuoteCharacter}";
+        return implode(', ', array_map(fn($value) => $this->formatScalar($value, $isIdentifier), $value));
     }
 
     /**
+     * Форматирует данные в идентификаторе
      * @param array|string|int|float|bool|null $identifier
      * @return string
      */
     private function formatIdentifier(mixed $identifier): string
     {
         if (is_array($identifier)) {
-            $resultPairs = [];
-            if ($this->isAssoc($identifier)) {
-                foreach ($identifier as $key => $value) {
-                    if (is_array($value)) { // IN
-                        $resultPairs[] = "{$this->quoteFieldName($key)} IN ({$this->formatArrayValue($value)})";
-                    } else { // =
-                        $resultPairs[] = "{$this->quoteFieldName($key)} = {$this->formatValue($value)}";
-                    }
-                }
-                return implode(', ', $resultPairs);
-            }
-            return  implode(', ', array_map([$this, 'quoteFieldName'], $identifier));
+            return $this->formatArray($identifier, true);
         }
-        return $this->formatValue($identifier);
+        return $this->formatScalar($identifier, true);
     }
 
     /**
@@ -171,5 +187,22 @@ class Database implements DatabaseInterface
         return array_keys($keys) !== $keys;
     }
 
+    /**
+     * @param string $fieldName
+     * @return string
+     */
+    private function quoteIdentifier(string $fieldName): string
+    {
+        return "{$this->identifierQuoteCharacter}{$fieldName}{$this->identifierQuoteCharacter}";
+    }
+
+    /**
+     * @param string $value
+     * @return string
+     */
+    private function quoteValue(string $value): string
+    {
+        return "{$this->valueQuoteCharacter}{$value}{$this->valueQuoteCharacter}";
+    }
 
 }
