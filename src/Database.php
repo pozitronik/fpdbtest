@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace FpDbTest;
+namespace pozitronik\FpDbTest;
 
 use Exception;
 use mysqli;

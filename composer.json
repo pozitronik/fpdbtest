@@ -5,7 +5,7 @@
     "license": "GPLv3",
     "autoload": {
         "psr-4": {
-            "Pozitronik\\Fpdbtest\\": "src/"
+            "pozitronik\\FpDbTest\\": "src/"
         }
     },
     "authors": [

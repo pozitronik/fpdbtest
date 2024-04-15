@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use Codeception\Test\Unit;
-use FpDbTest\DatabaseInterface;
+use pozitronik\FpDbTest\Database;
+use pozitronik\FpDbTest\DatabaseInterface;
 use Tests\Support\UnitTester;
 
 /**
@@ -22,6 +23,7 @@ class DatabaseTest extends Unit
      */
     protected function _before(): void
     {
+        $this->db = new Database();
     }
 
     public function testQueryWithoutTokens(): void
