@@ -8,13 +8,15 @@ use mysqli;
 
 /**
  * Class Database
- * @public string $quoteCharacter Строка, используемая для экранирования строк
+ * @public string $valueQuoteCharacter Строка, используемая для экранирования строк в значениях
+ * @public string $fieldQuoteCharacter Строка, используемая для экранирования строк в ключах
  * @public  bool $allowMarkerEscape true: разрешает экранирование символа '?' как '??'. false: подстановка производится всегда
  */
 class Database implements DatabaseInterface
 {
 
-    public string $quoteCharacter = "\'";
+    public string $valueQuoteCharacter = "\'";
+    public string $fieldQuoteCharacter = "`";
     public bool $allowMarkerEscape = true;
     private mysqli|null $mysqli = null;
 
@@ -100,23 +102,51 @@ class Database implements DatabaseInterface
         }
 
         if (!is_numeric($value)) {
-            return "{$this->quoteCharacter}{$value}{$this->quoteCharacter}";
+            return "{$this->valueQuoteCharacter}{$value}{$this->valueQuoteCharacter}";
         }
 
         return (string)$value;
     }
 
     /**
-     * @param array|string|int|float|bool|null $value
-     * @param bool $escape
+     * @param array $value
      * @return string
      */
-    private function formatIdentifier(mixed $value, bool $escape = true): string
+    private function formatArrayValue(array $value): string
     {
-        if (is_array($value)) {
-            return implode(', ', $escape ? array_map([$this, 'formatValue'], $value) : $value);
+        return implode(', ', array_map([$this, 'formatValue'], $value));
+    }
+
+    /**
+     * @param string $fieldName
+     * @return string
+     */
+    private function quoteFieldName(string $fieldName): string
+    {
+        return "{$this->fieldQuoteCharacter}{$fieldName}{$this->fieldQuoteCharacter}";
+    }
+
+    /**
+     * @param array|string|int|float|bool|null $identifier
+     * @return string
+     */
+    private function formatIdentifier(mixed $identifier): string
+    {
+        if (is_array($identifier)) {
+            $resultPairs = [];
+            if ($this->isAssoc($identifier)) {
+                foreach ($identifier as $key => $value) {
+                    if (is_array($value)) { // IN
+                        $resultPairs[] = "{$this->quoteFieldName($key)} IN ({$this->formatArrayValue($value)})";
+                    } else { //
+                        $resultPairs[] = "{$this->quoteFieldName($key)} = {$this->formatValue($value)}";
+                    }
+                }
+                return implode(', ', $resultPairs);
+            }
+            return $this->formatArrayValue($identifier);
         }
-        return $this->formatValue($value);
+        return $this->formatValue($identifier);
     }
 
     /**
@@ -126,6 +156,16 @@ class Database implements DatabaseInterface
     public function skip()
     {
         throw new Exception();
+    }
+
+    /**
+     * @param array $array
+     * @return bool
+     */
+    private function isAssoc(array $array): bool
+    {
+        $keys = array_keys($array);
+        return array_keys($keys) !== $keys;
     }
 
 
