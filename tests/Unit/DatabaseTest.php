@@ -26,12 +26,18 @@ class DatabaseTest extends Unit
         $this->db = new Database();
     }
 
+    /**
+     * @return void
+     */
     public function testQueryWithoutTokens(): void
     {
         $result = $this->db->buildQuery('SELECT name FROM users WHERE user_id = 1');
         static::assertEquals('SELECT name FROM users WHERE user_id = 1', $result);
     }
 
+    /**
+     * @return void
+     */
     public function testQuerySimpleDefaultToken(): void
     {
         $result = $this->db->buildQuery(
@@ -41,6 +47,9 @@ class DatabaseTest extends Unit
         static::assertEquals('SELECT * FROM users WHERE name = \'Jack\' AND block = 0', $result);
     }
 
+    /**
+     * @return void
+     */
     public function testQueryFieldNamesTokens(): void
     {
         $result = $this->db->buildQuery(
@@ -50,6 +59,9 @@ class DatabaseTest extends Unit
         static::assertEquals('SELECT `name`, `email` FROM users WHERE user_id = 2 AND block = 1', $result);
     }
 
+    /**
+     * @return void
+     */
     public function testQueryKeyValuePairsTokens(): void
     {
         $result = $this->db->buildQuery(
@@ -59,6 +71,9 @@ class DatabaseTest extends Unit
         static::assertEquals('UPDATE users SET `name` = \'Jack\', `email` = NULL WHERE user_id = -1', $result);
     }
 
+    /**
+     * @return void
+     */
     public function testQueryConditional(): void
     {
         $results = [];
