@@ -74,8 +74,8 @@ class Database implements DatabaseInterface
                 case 'a':
                     $result .= $this->formatIdentifier($value);
                     break;
-                case '#':
-                    $result .= $this->formatIdentifier($value, false);
+                case '#':  // согласно условию, токен применим только и идентификаторам, но не значениям
+                    $result .= $this->formatIdentifier($value);
                     break;
                 default:
                     $result .= $this->formatValue($value);
@@ -138,13 +138,13 @@ class Database implements DatabaseInterface
                 foreach ($identifier as $key => $value) {
                     if (is_array($value)) { // IN
                         $resultPairs[] = "{$this->quoteFieldName($key)} IN ({$this->formatArrayValue($value)})";
-                    } else { //
+                    } else { // =
                         $resultPairs[] = "{$this->quoteFieldName($key)} = {$this->formatValue($value)}";
                     }
                 }
                 return implode(', ', $resultPairs);
             }
-            return $this->formatArrayValue($identifier);
+            return  implode(', ', array_map([$this, 'quoteFieldName'], $identifier));
         }
         return $this->formatValue($identifier);
     }
@@ -155,7 +155,7 @@ class Database implements DatabaseInterface
      */
     public function skip()
     {
-        throw new Exception();
+//        throw new Exception();
     }
 
     /**
