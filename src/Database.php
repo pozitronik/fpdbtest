@@ -15,7 +15,7 @@ use mysqli;
 class Database implements DatabaseInterface
 {
 
-    public string $valueQuoteCharacter = "\'";
+    public string $valueQuoteCharacter = "'";
     public string $fieldQuoteCharacter = "`";
     public bool $allowMarkerEscape = true;
     private mysqli|null $mysqli = null;
