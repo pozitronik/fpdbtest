@@ -10,7 +10,8 @@ use mysqli;
  * Class Database
  * @public string $valueQuoteCharacter Строка, используемая для экранирования строк в значениях
  * @public string $fieldQuoteCharacter Строка, используемая для экранирования строк в ключах
- * @public  bool $allowMarkerEscape true: разрешает экранирование символа '?' как '??'. false: подстановка производится всегда
+ * @public bool $allowMarkerEscape true: разрешает экранирование символа '?' как '??'. false: подстановка производится всегда
+ * @public mixed $ignoreMarker Значение, используемое, как skip-маркер
  */
 class Database implements DatabaseInterface
 {
@@ -18,6 +19,8 @@ class Database implements DatabaseInterface
     public string $valueQuoteCharacter = "'";
     public string $fieldQuoteCharacter = "`";
     public bool $allowMarkerEscape = true;
+    public mixed$skipMarker = '/*!IGNORE!*/';
+
     private mysqli|null $mysqli = null;
 
 
@@ -153,9 +156,9 @@ class Database implements DatabaseInterface
      * @return mixed
      * @throws Exception
      */
-    public function skip()
+    public function skip(): mixed
     {
-//        throw new Exception();
+        return $this->skipMarker;
     }
 
     /**
