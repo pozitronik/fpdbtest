@@ -33,12 +33,24 @@ class Database implements DatabaseInterface
     }
 
     /**
+     * Обработка условных блоков.
+     * @param string $query
+     * @param array $args
+     * @return string
+     */
+    private function prepareConditionalQuery(string $query, array $args): string
+    {
+    }
+
+    /**
      * @param string $query
      * @param array $args
      * @return string
      */
     public function buildQuery(string $query, array $args = []): string
     {
+        $query = $this->prepareConditionalQuery($query, $args);
+
         // Инициализация результата и текущей позиции в строке
         $result = '';
         $pos = 0;
