@@ -86,4 +86,6 @@ class DatabaseTest extends Unit
         static::assertEquals('SELECT name FROM users WHERE `user_id` IN (1, 2, 3)', $results[0]);
         static::assertEquals('SELECT name FROM users WHERE `user_id` IN (1, 2, 3) AND block = 1', $results[1]);
     }
+
+    #todo: add negative cases
 }
