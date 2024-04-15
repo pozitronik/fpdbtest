@@ -1,0 +1,19 @@
+{
+    "name": "pozitronik/fpdbtest",
+    "description": "My solution for the test task",
+    "type": "project",
+    "license": "GPLv3",
+    "autoload": {
+        "psr-4": {
+            "Pozitronik\\Fpdbtest\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Pozitronik",
+            "email": "antikillerxxl@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {}
+}
