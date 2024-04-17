@@ -16,13 +16,13 @@ use mysqli;
  */
 class Database implements DatabaseInterface
 {
-    private const CONDITION_OPEN = '{';
-    private const CONDITION_CLOSE = '}';
-    private const REPLACE_MARKER = '?';
-    private const SPECIFIER_INT = 'd';
-    private const SPECIFIER_FLOAT = 'f';
-    private const SPECIFIER_ARRAY = 'a';
-    private const SPECIFIER_IDENTIFIER = '#';
+    private const string CONDITION_OPEN = '{';
+    private const string CONDITION_CLOSE = '}';
+    private const string REPLACE_MARKER = '?';
+    private const string SPECIFIER_INT = 'd';
+    private const string SPECIFIER_FLOAT = 'f';
+    private const string SPECIFIER_ARRAY = 'a';
+    private const string SPECIFIER_IDENTIFIER = '#';
 
     public string $valueQuoteCharacter = "'";
     public string $identifierQuoteCharacter = "`";
