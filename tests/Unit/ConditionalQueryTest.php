@@ -8,7 +8,6 @@ use Codeception\Test\Unit;
 use Exception;
 use pozitronik\FpDbTest\Database;
 use pozitronik\FpDbTest\DatabaseInterface;
-use Support\Helper\UnitHelper;
 use Tests\Support\UnitTester;
 
 /**
@@ -29,6 +28,7 @@ class ConditionalQueryTest extends Unit
     }
 
     /**
+     * Проверка условного выражения
      * @return void
      */
     public function testPositiveCondition(): void
@@ -38,6 +38,7 @@ class ConditionalQueryTest extends Unit
     }
 
     /**
+     * Проверка пропуска условного выражения
      * @return void
      */
     public function testPositiveSkippedCondition(): void
@@ -47,13 +48,35 @@ class ConditionalQueryTest extends Unit
     }
 
     /**
+     * Проверка пропуска условного выражения при наличии хотя бы одного skip-маркера
      * @return void
      */
-    public function testNegativeInsufficientParameters(): void
+    public function testPositiveSkippedOneArgumentCondition(): void
+    {
+        $result = $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d OR id = ?d}', ['user_id', [1, 2, 3], $this->db->skip(), 10]);
+        static::assertEquals('SELECT name FROM users WHERE `user_id` IN (1, 2, 3)', $result);
+    }
+
+    /**
+     * Проверка на недостаточное количество аргументов для подстановки
+     * @return void
+     */
+    public function testNegativeInsufficientArgument(): void
     {
         $this->expectException(Exception::class);
-        $this->expectExceptionMessage("Insufficient parameters");
+        $this->expectExceptionMessage("Insufficient arguments");
         $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}', ['user_id', [1, 2, 3]]);
+    }
+
+    /**
+     * Проверка на избыточное количество аргументов для подстановки
+     * @return void
+     */
+    public function testNegativeRedundantArgument(): void
+    {
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage("Redundant arguments");
+        $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}', ['user_id', [1, 2, 3], true, true]);
     }
 
     /**

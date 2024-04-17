@@ -110,6 +110,7 @@ class Database implements DatabaseInterface
         $result = '';
         $pos = 0;
         $length = strlen($subQuery);
+        $skippedConditionFlag = false;
 
         // Обработка шаблона
         while ($pos < $length) {
@@ -134,32 +135,34 @@ class Database implements DatabaseInterface
             $pos += 2;
 
             if (null === $value = array_shift($args)) { // Извлекаем первый элемент параметров
-                throw new Exception("Insufficient parameters");
+                throw new Exception("Insufficient arguments");
             }
             if ($conditional && $value === $this->skip()) { // внутри условного выражения встречен маркер пропуска
-                return '';
+                $skippedConditionFlag = true; //условие пропущено, но цикл нельзя прерывать для корректного прохода по аргументам
             }
-            switch ($specifier) {
-                case 'd':
-                    $result .= (int)$value;
-                    break;
-                case 'f':
-                    $result .= (float)$value;
-                    break;
-                case 'a':
-                    $result .= $this->formatArray($value);
-                    break;
-                case '#':  // согласно условию, токен применим только и идентификаторам, но не значениям
-                    $result .= $this->formatIdentifier($value);
-                    break;
-                default:
-                    $result .= $this->formatScalar($value);
-                    --$pos; //корректировка сдвига
-                    break;
+            if (!$skippedConditionFlag) {
+                switch ($specifier) {
+                    case 'd':
+                        $result .= (int)$value;
+                        break;
+                    case 'f':
+                        $result .= (float)$value;
+                        break;
+                    case 'a':
+                        $result .= $this->formatArray($value);
+                        break;
+                    case '#':  // согласно условию, токен применим только и идентификаторам, но не значениям
+                        $result .= $this->formatIdentifier($value);
+                        break;
+                    default:
+                        $result .= $this->formatScalar($value);
+                        --$pos; //корректировка сдвига
+                        break;
+                }
             }
         }
 
-        return $result;
+        return $skippedConditionFlag ? '' : $result;
     }
 
     /**
@@ -174,6 +177,9 @@ class Database implements DatabaseInterface
         $queryParts = $this->tokenizeQueryConditions($query);
         foreach ($queryParts as $queryPart) {
             $result .= $this->buildSubQuery($queryPart['value'], $args, $queryPart['condition']);
+        }
+        if ([] !== $args) {
+            throw new Exception("Redundant arguments");
         }
         return $result;
     }
