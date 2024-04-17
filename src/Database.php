@@ -168,6 +168,10 @@ class Database implements DatabaseInterface
                         $result .= (float)$value;
                         break;
                     case static::SPECIFIER_ARRAY:
+                        if (!is_array($value)) {
+                            $varType = gettype($value);
+                            throw new Exception("Wrong argument type: array expected, got {$varType}");
+                        }
                         $result .= $this->formatArray($value);
                         break;
                     case static::SPECIFIER_IDENTIFIER:  // согласно условию, токен применим только и идентификаторам, но не значениям
