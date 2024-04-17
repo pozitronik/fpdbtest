@@ -16,6 +16,13 @@ use mysqli;
  */
 class Database implements DatabaseInterface
 {
+    private const CONDITION_OPEN = '{';
+    private const CONDITION_CLOSE = '}';
+    private const REPLACE_MARKER = '?';
+    private const SPECIFIER_INT = 'd';
+    private const SPECIFIER_FLOAT = 'f';
+    private const SPECIFIER_ARRAY = 'a';
+    private const SPECIFIER_IDENTIFIER = '#';
 
     public string $valueQuoteCharacter = "'";
     public string $identifierQuoteCharacter = "`";
@@ -54,7 +61,7 @@ class Database implements DatabaseInterface
             $char = $query[$i];
 
             // Проверяем начало блока
-            if ('{' === $char) {
+            if (static::CONDITION_OPEN === $char) {
                 if ($this->escapeCharacter === $previousChar) {
                     $current[-1] = $char;
                 } else {
@@ -71,7 +78,7 @@ class Database implements DatabaseInterface
                     }
                     $depth++;
                 }
-            } elseif ('}' === $char) {
+            } elseif (static::CONDITION_CLOSE === $char) {
                 if ($this->escapeCharacter === $previousChar) {
                     $current[-1] = $char;
                 } else {
@@ -126,8 +133,8 @@ class Database implements DatabaseInterface
 
         // Обработка шаблона
         while ($pos < $length) {
-            // Находим следующий вопросительный знак
-            $nextPos = strpos($subQuery, '?', $pos);
+            // Находим следующий маркер
+            $nextPos = strpos($subQuery, static::REPLACE_MARKER, $pos);
             if (false === $nextPos) {
                 $result .= substr($subQuery, $pos);
                 break;
@@ -137,9 +144,9 @@ class Database implements DatabaseInterface
             $result .= substr($subQuery, $pos, $nextPos - $pos);
             $pos = $nextPos;
 
-            if ($this->allowMarkerEscape && (isset($subQuery[$pos + 1]) && '?' === $subQuery[$pos + 1])) {// Проверяем, следует ли за вопросительным знаком другой вопросительный знак
-                $result .= '?';
-                $pos += 2; // Пропускаем оба знака вопроса
+            if ($this->allowMarkerEscape && (isset($subQuery[$pos + 1]) && static::REPLACE_MARKER === $subQuery[$pos + 1])) {// Проверяем, следует ли за вопросительным знаком другой вопросительный знак
+                $result .= static::REPLACE_MARKER;
+                $pos += 2; // Пропускаем два маркера
                 continue;
             }
 
@@ -154,16 +161,16 @@ class Database implements DatabaseInterface
             }
             if (!$skippedConditionFlag) {
                 switch ($specifier) {
-                    case 'd':
+                    case static::SPECIFIER_INT:
                         $result .= (int)$value;
                         break;
-                    case 'f':
+                    case static::SPECIFIER_FLOAT:
                         $result .= (float)$value;
                         break;
-                    case 'a':
+                    case static::SPECIFIER_ARRAY:
                         $result .= $this->formatArray($value);
                         break;
-                    case '#':  // согласно условию, токен применим только и идентификаторам, но не значениям
+                    case static::SPECIFIER_IDENTIFIER:  // согласно условию, токен применим только и идентификаторам, но не значениям
                         $result .= $this->formatIdentifier($value);
                         break;
                     default:
