@@ -11,7 +11,6 @@ use pozitronik\FpDbTest\DatabaseInterface;
 use Tests\Support\UnitTester;
 
 /**
- * @covers \pozitronik\FpDbTest\Database::prepareConditionalQuery
  */
 class ConditionalQueryTest extends Unit
 {

@@ -8,7 +8,7 @@ use pozitronik\FpDbTest\DatabaseInterface;
 use Tests\Support\UnitTester;
 
 /**
- * @covers \pozitronik\FpDbTest\Database::tokenizeQuery
+ * @covers \pozitronik\FpDbTest\Database::tokenizeQueryConditions
  */
 class TokenizerTest extends Unit
 {
@@ -84,7 +84,6 @@ class TokenizerTest extends Unit
                 'value' => ' OR id IS NULL'
             ]
         ]);
-
     }
 
 
@@ -97,7 +96,6 @@ class TokenizerTest extends Unit
         $this->expectException(Exception::class);
         $this->expectExceptionMessage("Unmatched braces");
         static::invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE {?# IN (?a)}}{ AND block = ?d}']);
-
     }
 
     /**
