@@ -32,14 +32,58 @@ class Database implements DatabaseInterface
         $this->mysqli = $mysqli;
     }
 
+    private function strposex(string $haystack, array $needle, int $pos = 0, string &$found = ''): int|false
+    {
+        $cPos = $pos;
+        $length = strlen($haystack);
+        while ($cPos < $length) {
+            if (in_array($haystack[$cPos], $needle, true)) {
+                $found = $haystack[$cPos];
+                return $cPos;
+            }
+            $cPos++;
+        }
+        return false;
+    }
+
     /**
-     * Обработка условных блоков.
      * @param string $query
      * @param array $args
-     * @return string
+     * @return array
      */
-    private function prepareConditionalQuery(string $query, array $args): string
+    private function checkQueryValidity(string $query, array $args): array
     {
+        $length = strlen($query);
+        $pos = 0;
+        $replacementsStack = [];
+        $found = '';
+        $tokenIndex = 0;
+
+        while ($pos < $length) {
+            if (false !== $pos = $this->strposex($query, ['?', '{', '}'], $pos, $found)) {
+                $specifier = $query[$pos + 1] ?? '';
+                switch ($found) {
+                    case '?':
+                        if ($this->allowMarkerEscape && '?' === $specifier) {// Проверяем, следует ли за вопросительным знаком другой вопросительный знак
+                            $pos += 2; // Пропускаем оба знака вопроса
+                        } else {
+                            $replacementsStack[$pos] = [$specifier, $args[$tokenIndex]];
+                            $pos++;
+                        }
+                        break;
+                    case '{':
+                        #todo
+                        break;
+                    case '}':
+                        #todo
+                        break;
+                }
+                $tokenIndex++;
+            } else {
+                return $replacementsStack;
+            }
+        }
+        return $replacementsStack;
     }
 
     /**
@@ -49,7 +93,39 @@ class Database implements DatabaseInterface
      */
     public function buildQuery(string $query, array $args = []): string
     {
-        $query = $this->prepareConditionalQuery($query, $args);
+        $rStack = array_reverse($this->checkQueryValidity($query, $args), true); // выворачиваем массив, чтобы не портить строку
+        foreach ($rStack as $position => $replacements) {
+            list($specifier, $value) = $replacements;
+            switch ($specifier) {
+                case 'd':
+                    $result = (int)$value;
+                    $query = substr_replace($query, (string)$result, $position, 2);
+                    break;
+                case 'f':
+                    $result = (float)$value;
+                    $query = substr_replace($query, (string)$result, $position, 2);
+                    break;
+                case 'a':
+                    $result = $this->formatArray($value);
+                    $query = substr_replace($query, $result, $position, 2);
+                    break;
+                case '#':  // согласно условию, токен применим только и идентификаторам, но не значениям
+                    $result = $this->formatIdentifier($value);
+                    $query = substr_replace($query, $result, $position, 2);
+                    break;
+                default:
+                    $result = $this->formatScalar($value);
+                    $query = substr_replace($query, $result, $position, 1);
+                    break;
+            }
+        }
+        return $query;
+    }
+
+
+    public function buildQueryOld(string $query, array $args = []): string
+    {
+        $this->checkQueryValidity($query, $args);
 
         // Инициализация результата и текущей позиции в строке
         $result = '';
