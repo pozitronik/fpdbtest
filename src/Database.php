@@ -8,8 +8,9 @@ use mysqli;
 
 /**
  * Class Database
- * @public string $valueQuoteCharacter Строка, используемая для экранирования строк в значениях
- * @public string $identifierQuoteCharacter Строка, используемая для экранирования строк в идентификаторах
+ * @public string $valueQuoteCharacter Символ, используемый для экранирования строк в значениях
+ * @public string $identifierQuoteCharacter Символ, используемый для экранирования строк в идентификаторах
+ * @public string $escapeCharacter Символ, используемый для экранирования символов
  * @public bool $allowMarkerEscape true: разрешает экранирование символа '?' как '??'. false: подстановка производится всегда
  * @public mixed $ignoreMarker Значение, используемое, как skip-маркер
  */
@@ -18,6 +19,7 @@ class Database implements DatabaseInterface
 
     public string $valueQuoteCharacter = "'";
     public string $identifierQuoteCharacter = "`";
+    public string $escapeCharacter = "/";
     public bool $allowMarkerEscape = true;
     public mixed $skipMarker = '/*!IGNORE!*/';
 
@@ -48,35 +50,45 @@ class Database implements DatabaseInterface
         $depth = 0;
 
         for ($i = 0; $i < $length; $i++) {
+            $previousChar = 0 === $i ? '' : $query[$i - 1];
             $char = $query[$i];
 
             // Проверяем начало блока
             if ('{' === $char) {
-                if (0 === $depth) { // Если это начало нового блока
-                    if ('' !== $current) {
-                        $result[] = [
-                            'condition' => false,
-                            'value' => $current
-                        ];
+                if ($this->escapeCharacter === $previousChar) {
+                    $current[-1] = $char;
+                } else {
+                    if (0 === $depth) { // Если это начало нового блока
+                        if ('' !== $current) {
+                            $result[] = [
+                                'condition' => false,
+                                'value' => $current
+                            ];
+                        }
+                        $current = '';
+                    } elseif ($depth > 0) {
+                        throw new Exception("Nested conditional expression");
                     }
-                    $current = '';
-                } elseif ($depth > 0) {
-                    throw new Exception("Nested conditional expression");
+                    $depth++;
                 }
-                $depth++;
             } elseif ('}' === $char) {
-                $depth--;
-                if (0 === $depth) { // Если это конец блока
-                    if ('' !== $current) {
-                        $result[] = [
-                            'condition' => true,
-                            'value' => $current
-                        ];
+                if ($this->escapeCharacter === $previousChar) {
+                    $current[-1] = $char;
+                } else {
+                    $depth--;
+                    if (0 === $depth) { // Если это конец блока
+                        if ('' !== $current) {
+                            $result[] = [
+                                'condition' => true,
+                                'value' => $current
+                            ];
+                        }
+                        $current = '';
+                    } elseif ($depth < 0) {
+                        throw new Exception("Unmatched braces");
                     }
-                    $current = '';
-                } elseif ($depth < 0) {
-                    throw new Exception("Unmatched braces");
                 }
+
             } else {
                 $current .= $char;
             }

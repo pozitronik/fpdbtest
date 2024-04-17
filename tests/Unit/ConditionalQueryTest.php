@@ -100,23 +100,25 @@ class ConditionalQueryTest extends Unit
     }
 
     /**
+     * Проверка экранирования скобок
      * @return void
-     * todo
      */
-    public function testPositiveQuotedCurlyBraces(): void
+    public function testPositiveEscapeCurlyBraces(): void
     {
-        $result = $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a)/{ AND block = ?d/}', ['user_id', [1, 2, 3]]);
-        static::assertEquals($result, 'SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}');
+        $result = $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a)/{ AND block = ?d/}', ['user_id', [1, 2, 3], 10]);
+        static::assertEquals('SELECT name FROM users WHERE `user_id` IN (1, 2, 3){ AND block = 10}', $result);
     }
 
     /**
+     * Проверка экранированных скобок в сочетании с условными выражениями
      * @return void
-     * todo
      */
-    public function testNegativeQuotedCurlyBraces(): void
+    public function testPositiveEscapeCurlyBracesCondition(): void
     {
-        $this->expectException(Exception::class);
-        $this->expectExceptionMessage("Unmatched braces");
-        $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a)/{{ AND block = ?d/}}', ['user_id', [1, 2, 3], true]);
+        $result = $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a)/{{ AND block = ?d/}}', ['user_id', [1, 2, 3], true]);
+        static::assertEquals('SELECT name FROM users WHERE `user_id` IN (1, 2, 3){ AND block = 1}', $result);
+
+        $result = $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a){/{ AND block = ?d}/}', ['user_id', [1, 2, 3], true]);
+        static::assertEquals('SELECT name FROM users WHERE `user_id` IN (1, 2, 3){ AND block = 1}', $result);
     }
 }
