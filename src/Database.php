@@ -22,6 +22,7 @@ class Database implements DatabaseInterface
     public mixed $skipMarker = '/*!IGNORE!*/';
 
     private mysqli|null $mysqli = null;
+    private bool $conditionFlag = false;
 
 
     /**
@@ -47,6 +48,22 @@ class Database implements DatabaseInterface
     }
 
     /**
+     * @param bool $openBrace
+     * @return voic
+     * @throws Exception
+     */
+    public function checkCondition(bool $openBrace): voic
+    {
+        if ($openBrace && $this->conditionFlag) {
+            throw new Exception("Nested conditional expression");
+        }
+
+        if (!$openBrace && !$this->conditionFlag) {
+            throw new Exception("Unmatched braces");
+        }
+    }
+
+    /**
      * @param string $query
      * @param array $args
      * @return array
@@ -58,6 +75,8 @@ class Database implements DatabaseInterface
         $replacementsStack = [];
         $found = '';
         $tokenIndex = 0;
+        $conditionOpenPos = -1;
+        $conditionIgnoreFlag = false;
 
         while ($pos < $length) {
             if (false !== $pos = $this->strposex($query, ['?', '{', '}'], $pos, $found)) {
@@ -67,15 +86,29 @@ class Database implements DatabaseInterface
                         if ($this->allowMarkerEscape && '?' === $specifier) {// Проверяем, следует ли за вопросительным знаком другой вопросительный знак
                             $pos += 2; // Пропускаем оба знака вопроса
                         } else {
+                            if ($args[$tokenIndex] === $this->skip()) {
+                                if ($this->conditionFlag) {
+                                    $conditionIgnoreFlag = true;
+                                } else {
+                                    throw new Exception("Ignore marker outside of condition.");
+                                }
+                            }
+
+                            /** @var int $pos */
                             $replacementsStack[$pos] = [$specifier, $args[$tokenIndex]];
                             $pos++;
                         }
                         break;
                     case '{':
-                        #todo
+                        $this->checkCondition(true);
+                        $this->conditionFlag = true;
+                        $conditionOpenPos = $pos;
                         break;
                     case '}':
-                        #todo
+                        $this->checkCondition(false);
+                        $this->conditionFlag = false;
+                        /* Проверяем, должен ли условный блок включаться или игнорироваться*/
+                        if ($conditionIgnoreFlag)
                         break;
                 }
                 $tokenIndex++;
