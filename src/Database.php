@@ -47,77 +47,68 @@ class Database implements DatabaseInterface
         return false;
     }
 
-    /**
-     * @param bool $openBrace
-     * @return voic
-     * @throws Exception
-     */
-    public function checkCondition(bool $openBrace): voic
-    {
-        if ($openBrace && $this->conditionFlag) {
-            throw new Exception("Nested conditional expression");
-        }
-
-        if (!$openBrace && !$this->conditionFlag) {
-            throw new Exception("Unmatched braces");
-        }
-    }
 
     /**
      * @param string $query
-     * @param array $args
      * @return array
+     * @throws Exception
      */
-    private function checkQueryValidity(string $query, array $args): array
+    private function tokenizeQuery(string $query): array
     {
         $length = strlen($query);
-        $pos = 0;
-        $replacementsStack = [];
-        $found = '';
-        $tokenIndex = 0;
-        $conditionOpenPos = -1;
-        $conditionIgnoreFlag = false;
+        $result = [];
+        $current = '';
+        $depth = 0;
 
-        while ($pos < $length) {
-            if (false !== $pos = $this->strposex($query, ['?', '{', '}'], $pos, $found)) {
-                $specifier = $query[$pos + 1] ?? '';
-                switch ($found) {
-                    case '?':
-                        if ($this->allowMarkerEscape && '?' === $specifier) {// Проверяем, следует ли за вопросительным знаком другой вопросительный знак
-                            $pos += 2; // Пропускаем оба знака вопроса
-                        } else {
-                            if ($args[$tokenIndex] === $this->skip()) {
-                                if ($this->conditionFlag) {
-                                    $conditionIgnoreFlag = true;
-                                } else {
-                                    throw new Exception("Ignore marker outside of condition.");
-                                }
-                            }
+        for ($i = 0; $i < $length; $i++) {
+            $char = $query[$i];
 
-                            /** @var int $pos */
-                            $replacementsStack[$pos] = [$specifier, $args[$tokenIndex]];
-                            $pos++;
-                        }
-                        break;
-                    case '{':
-                        $this->checkCondition(true);
-                        $this->conditionFlag = true;
-                        $conditionOpenPos = $pos;
-                        break;
-                    case '}':
-                        $this->checkCondition(false);
-                        $this->conditionFlag = false;
-                        /* Проверяем, должен ли условный блок включаться или игнорироваться*/
-                        if ($conditionIgnoreFlag)
-                        break;
+            // Проверяем начало блока
+            if ('{' === $char) {
+                if (0 === $depth) { // Если это начало нового блока
+                    if ('' !== $current) {
+                        $result[] = [
+                            'condition' => false,
+                            'value' => $current
+                        ];
+                    }
+                    $current = '';
+                } elseif ($depth > 0) {
+                    throw new Exception("Nested conditional expression");
                 }
-                $tokenIndex++;
+                $depth++;
+            } elseif ('}' === $char) {
+                $depth--;
+                if (0 === $depth) { // Если это конец блока
+                    if ('' !== $current) {
+                        $result[] = [
+                            'condition' => true,
+                            'value' => $current
+                        ];
+                    }
+                    $current = '';
+                } elseif ($depth < 0) {
+                    throw new Exception("Unmatched braces");
+                }
             } else {
-                return $replacementsStack;
+                $current .= $char;
             }
         }
-        return $replacementsStack;
+
+        if ($depth > 0) {
+            throw new Exception("Незакрытая открывающая скобка");
+        }
+
+        if ('' !== $current) {
+            $result[] = [
+                'condition' => false,
+                'value' => $current
+            ];
+        }
+
+        return $result;
     }
+
 
     /**
      * @param string $query
