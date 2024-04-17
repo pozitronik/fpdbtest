@@ -133,7 +133,9 @@ class Database implements DatabaseInterface
             $specifier = $subQuery[$pos + 1] ?? '';
             $pos += 2;
 
-            $value = array_shift($args); // Извлекаем первый элемент параметров
+            if (null === $value = array_shift($args)) { // Извлекаем первый элемент параметров
+                throw new Exception("Insufficient parameters");
+            }
             if ($conditional && $value === $this->skip()) { // внутри условного выражения встречен маркер пропуска
                 return '';
             }

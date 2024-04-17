@@ -8,7 +8,6 @@ use Codeception\Test\Unit;
 use Exception;
 use pozitronik\FpDbTest\Database;
 use pozitronik\FpDbTest\DatabaseInterface;
-use ReflectionException;
 use Support\Helper\UnitHelper;
 use Tests\Support\UnitTester;
 
@@ -50,10 +49,10 @@ class ConditionalQueryTest extends Unit
     /**
      * @return void
      */
-    public function testNegativeUnmatchedValues(): void
+    public function testNegativeInsufficientParameters(): void
     {
         $this->expectException(Exception::class);
-        $this->expectExceptionMessage("Parameters count doesn''t match"); //todo
+        $this->expectExceptionMessage("Insufficient parameters");
         $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}', ['user_id', [1, 2, 3]]);
     }
 
