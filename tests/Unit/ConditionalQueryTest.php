@@ -31,76 +31,70 @@ class ConditionalQueryTest extends Unit
 
     /**
      * @return void
-     * @throws ReflectionException
      */
     public function testPositiveCondition(): void
     {
-        $result = UnitHelper::invokePrivateMethod($this->db, 'prepareConditionalQuery', ['SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}', ['user_id', [1, 2, 3], true]]);
-        static::assertEquals($result, 'SELECT name FROM users WHERE ?# IN (?a) AND block = ?d');
+        $result = $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}', ['user_id', [1, 2, 3], true]);
+        static::assertEquals('SELECT name FROM users WHERE `user_id` IN (1, 2, 3) AND block = 1', $result);
     }
 
     /**
      * @return void
-     * @throws ReflectionException
      */
     public function testPositiveSkippedCondition(): void
     {
-        $result = UnitHelper::invokePrivateMethod($this->db, 'prepareConditionalQuery', ['SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}', ['user_id', [1, 2, 3], $this->db->skip()]]);
-        static::assertEquals($result, 'SELECT name FROM users WHERE ?# IN (?a)');
+        $result = $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}', ['user_id', [1, 2, 3], $this->db->skip()]);
+        static::assertEquals('SELECT name FROM users WHERE `user_id` IN (1, 2, 3)', $result);
     }
 
     /**
      * @return void
-     * @throws ReflectionException
      */
     public function testNegativeUnmatchedValues(): void
     {
         $this->expectException(Exception::class);
-        $this->expectExceptionMessage("Parameters count doesn''t match");
-        UnitHelper::invokePrivateMethod($this->db, 'prepareConditionalQuery', ['SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}', ['user_id', [1, 2, 3]]]);
-
+        $this->expectExceptionMessage("Parameters count doesn''t match"); //todo
+        $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}', ['user_id', [1, 2, 3]]);
     }
 
     /**
      * @return void
-     * @throws ReflectionException
      */
-    public function testNegativeUnmatchedCurlyBraces(): void
+    public function testNegativeNestedOpenCurlyBraces(): void
     {
         $this->expectException(Exception::class);
-        $this->expectExceptionMessage("Unmatched braces");
-        UnitHelper::invokePrivateMethod($this->db, 'prepareConditionalQuery', ['SELECT name FROM users WHERE ?# IN (?a){{ AND block = ?d}', ['user_id', [1, 2, 3], true]]);
+        $this->expectExceptionMessage("Nested conditional expression");
+        $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a){{ AND block = ?d}', ['user_id', [1, 2, 3], true]);
     }
 
     /**
      * @return void
-     * @throws ReflectionException
      */
     public function testNegativeNestedCurlyBraces(): void
     {
         $this->expectException(Exception::class);
         $this->expectExceptionMessage("Nested conditional expression");
-        UnitHelper::invokePrivateMethod($this->db, 'prepareConditionalQuery', ['SELECT name FROM users WHERE ?# IN (?a){{ AND block = ?d}}', ['user_id', [1, 2, 3], true]]);
+        $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a){{ AND block = ?d}}', ['user_id', [1, 2, 3], true]);
     }
 
     /**
      * @return void
-     * @throws ReflectionException
+     * todo
      */
     public function testPositiveQuotedCurlyBraces(): void
     {
-        $result = UnitHelper::invokePrivateMethod($this->db, 'prepareConditionalQuery', ['SELECT name FROM users WHERE ?# IN (?a)/{ AND block = ?d/}', ['user_id', [1, 2, 3]]]);
+        $result = $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a)/{ AND block = ?d/}', ['user_id', [1, 2, 3]]);
         static::assertEquals($result, 'SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}');
     }
 
     /**
      * @return void
-     * @throws ReflectionException
+     * todo
      */
     public function testNegativeQuotedCurlyBraces(): void
     {
         $this->expectException(Exception::class);
         $this->expectExceptionMessage("Unmatched braces");
-        UnitHelper::invokePrivateMethod($this->db, 'prepareConditionalQuery', ['SELECT name FROM users WHERE ?# IN (?a)/{{} AND block = ?d/}', ['user_id', [1, 2, 3], true]]);
+        $this->db->buildQuery('SELECT name FROM users WHERE ?# IN (?a)/{{ AND block = ?d/}}', ['user_id', [1, 2, 3], true]);
     }
 }
