@@ -21,8 +21,8 @@ class Database implements DatabaseInterface
     public bool $allowMarkerEscape = true;
     public mixed $skipMarker = '/*!IGNORE!*/';
 
+    /** @noinspection PhpPropertyOnlyWrittenInspection Атрибут требуется в задании, но для демонстрации исполнения не используется */
     private mysqli|null $mysqli = null;
-    private bool $conditionFlag = false;
 
 
     /**
@@ -30,30 +30,17 @@ class Database implements DatabaseInterface
      */
     public function __construct(mysqli|null $mysqli = null)
     {
+        /** @noinspection UnusedConstructorDependenciesInspection */
         $this->mysqli = $mysqli;
     }
 
-    private function strposex(string $haystack, array $needle, int $pos = 0, string &$found = ''): int|false
-    {
-        $cPos = $pos;
-        $length = strlen($haystack);
-        while ($cPos < $length) {
-            if (in_array($haystack[$cPos], $needle, true)) {
-                $found = $haystack[$cPos];
-                return $cPos;
-            }
-            $cPos++;
-        }
-        return false;
-    }
-
-
     /**
+     * Разбивает строку на токены условных блоков, проверяя корректность выражений
      * @param string $query
      * @return array
      * @throws Exception
      */
-    private function tokenizeQuery(string $query): array
+    private function tokenizeQueryConditions(string $query): array
     {
         $length = strlen($query);
         $result = [];
@@ -109,76 +96,47 @@ class Database implements DatabaseInterface
         return $result;
     }
 
-
     /**
-     * @param string $query
+     * Подставляет значения вместо маркеров внутри переданной подстроки
+     * @param string $subQuery
      * @param array $args
+     * @param bool $conditional
      * @return string
+     * @throws Exception
      */
-    public function buildQuery(string $query, array $args = []): string
+    public function buildSubQuery(string $subQuery, array &$args = [], bool $conditional = false): string
     {
-        $rStack = array_reverse($this->checkQueryValidity($query, $args), true); // выворачиваем массив, чтобы не портить строку
-        foreach ($rStack as $position => $replacements) {
-            list($specifier, $value) = $replacements;
-            switch ($specifier) {
-                case 'd':
-                    $result = (int)$value;
-                    $query = substr_replace($query, (string)$result, $position, 2);
-                    break;
-                case 'f':
-                    $result = (float)$value;
-                    $query = substr_replace($query, (string)$result, $position, 2);
-                    break;
-                case 'a':
-                    $result = $this->formatArray($value);
-                    $query = substr_replace($query, $result, $position, 2);
-                    break;
-                case '#':  // согласно условию, токен применим только и идентификаторам, но не значениям
-                    $result = $this->formatIdentifier($value);
-                    $query = substr_replace($query, $result, $position, 2);
-                    break;
-                default:
-                    $result = $this->formatScalar($value);
-                    $query = substr_replace($query, $result, $position, 1);
-                    break;
-            }
-        }
-        return $query;
-    }
-
-
-    public function buildQueryOld(string $query, array $args = []): string
-    {
-        $this->checkQueryValidity($query, $args);
-
         // Инициализация результата и текущей позиции в строке
         $result = '';
         $pos = 0;
-        $length = strlen($query);
+        $length = strlen($subQuery);
 
         // Обработка шаблона
         while ($pos < $length) {
             // Находим следующий вопросительный знак
-            $nextPos = strpos($query, '?', $pos);
+            $nextPos = strpos($subQuery, '?', $pos);
             if (false === $nextPos) {
-                $result .= substr($query, $pos);
+                $result .= substr($subQuery, $pos);
                 break;
             }
 
             // Добавляем текст до вопросительного знака
-            $result .= substr($query, $pos, $nextPos - $pos);
+            $result .= substr($subQuery, $pos, $nextPos - $pos);
             $pos = $nextPos;
 
-            if ($this->allowMarkerEscape && (isset($query[$pos + 1]) && '?' === $query[$pos + 1])) {// Проверяем, следует ли за вопросительным знаком другой вопросительный знак
+            if ($this->allowMarkerEscape && (isset($subQuery[$pos + 1]) && '?' === $subQuery[$pos + 1])) {// Проверяем, следует ли за вопросительным знаком другой вопросительный знак
                 $result .= '?';
                 $pos += 2; // Пропускаем оба знака вопроса
                 continue;
             }
 
-            $specifier = $query[$pos + 1] ?? '';
+            $specifier = $subQuery[$pos + 1] ?? '';
             $pos += 2;
 
             $value = array_shift($args); // Извлекаем первый элемент параметров
+            if ($conditional && $value === $this->skip()) { // внутри условного выражения встречен маркер пропуска
+                return '';
+            }
             switch ($specifier) {
                 case 'd':
                     $result .= (int)$value;
@@ -201,6 +159,23 @@ class Database implements DatabaseInterface
 
         return $result;
     }
+
+    /**
+     * @param string $query
+     * @param array $args
+     * @return string
+     * @throws Exception
+     */
+    public function buildQuery(string $query, array $args = []): string
+    {
+        $result = '';
+        $queryParts = $this->tokenizeQueryConditions($query);
+        foreach ($queryParts as $queryPart) {
+            $result .= $this->buildSubQuery($queryPart['value'], $args, $queryPart['condition']);
+        }
+        return $result;
+    }
+
 
     /**
      * Форматирует и, при необходимости, экранирует скалярное (+null) значение в соответствии с заданными правилами
