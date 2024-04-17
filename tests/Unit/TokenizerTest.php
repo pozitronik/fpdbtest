@@ -17,20 +17,6 @@ class TokenizerTest extends Unit
     private DatabaseInterface $db;
 
     /**
-     * Вызывает закрытый метод класса
-     * @param object $theClass
-     * @param string $methodName
-     * @param array $args
-     * @return mixed
-     * @throws ReflectionException
-     */
-    public static function invokePrivateMethod(object $theClass, string $methodName, array $args): mixed
-    {
-        if (null === $class = new ReflectionClass($theClass)) return null;
-        return $class->getMethod($methodName)->invokeArgs($theClass, $args);
-    }
-
-    /**
      * @Override
      */
     protected function _before(): void
@@ -44,8 +30,8 @@ class TokenizerTest extends Unit
      */
     public function testPositiveCondition(): void
     {
-        $result = static::invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}']);
-        static::assertEquals($result, [
+        $result = $this->tester->invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE ?# IN (?a){ AND block = ?d}']);
+        $this->tester->assertEquals($result, [
             [
                 'condition' => false,
                 'value' => 'SELECT name FROM users WHERE ?# IN (?a)'
@@ -54,8 +40,8 @@ class TokenizerTest extends Unit
                 'value' => ' AND block = ?d'
             ]
         ]);
-        $result = static::invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE {?# IN (?a)}{ AND block = ?d}']);
-        static::assertEquals($result, [
+        $result = $this->tester->invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE {?# IN (?a)}{ AND block = ?d}']);
+        $this->tester->assertEquals($result, [
             [
                 'condition' => false,
                 'value' => 'SELECT name FROM users WHERE '
@@ -68,8 +54,8 @@ class TokenizerTest extends Unit
             ]
         ]);
 
-        $result = static::invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE {?# IN (?a)}{ AND block = ?d} OR id IS NULL']);
-        static::assertEquals($result, [
+        $result = $this->tester->invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE {?# IN (?a)}{ AND block = ?d} OR id IS NULL']);
+        $this->tester->assertEquals($result, [
             [
                 'condition' => false,
                 'value' => 'SELECT name FROM users WHERE '
@@ -95,7 +81,7 @@ class TokenizerTest extends Unit
     {
         $this->expectException(Exception::class);
         $this->expectExceptionMessage("Unmatched braces");
-        static::invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE {?# IN (?a)}}{ AND block = ?d}']);
+        $this->tester->invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE {?# IN (?a)}}{ AND block = ?d}']);
     }
 
     /**
@@ -106,10 +92,10 @@ class TokenizerTest extends Unit
     {
         $this->expectException(Exception::class);
         $this->expectExceptionMessage("Nested conditional expression");
-        static::invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE {?# IN (?a){ AND block = ?d}']);
+        $this->tester->invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE {?# IN (?a){ AND block = ?d}']);
 
         $this->expectException(Exception::class);
         $this->expectExceptionMessage("Nested conditional expression");
-        static::invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE {{?# IN (?a)}}{ AND block = ?d}']);
+        $this->tester->invokePrivateMethod($this->db, 'tokenizeQueryConditions', ['SELECT name FROM users WHERE {{?# IN (?a)}}{ AND block = ?d}']);
     }
 }

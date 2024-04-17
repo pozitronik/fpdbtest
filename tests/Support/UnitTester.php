@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use Codeception\Actor;
+use ReflectionClass;
+use ReflectionException;
+
 /**
  * Inherited Methods
  * @method void wantTo($text)
@@ -19,11 +23,21 @@ namespace Tests\Support;
  *
  * @SuppressWarnings(PHPMD)
 */
-class UnitTester extends \Codeception\Actor
+class UnitTester extends Actor
 {
     use _generated\UnitTesterActions;
 
     /**
-     * Define custom actions here
+     * Вызывает закрытый метод класса
+     * @param object $theClass
+     * @param string $methodName
+     * @param array $args
+     * @return mixed
+     * @throws ReflectionException
      */
+    public function invokePrivateMethod(object $theClass, string $methodName, array $args): mixed
+    {
+        if (null === $class = new ReflectionClass($theClass)) return null;
+        return $class->getMethod($methodName)->invokeArgs($theClass, $args);
+    }
 }
