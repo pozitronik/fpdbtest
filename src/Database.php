@@ -10,7 +10,7 @@ use mysqli;
  * Class Database
  * @public string $valueQuoteCharacter Символ, используемый для экранирования строк в значениях
  * @public string $identifierQuoteCharacter Символ, используемый для экранирования строк в идентификаторах
- * @public string $escapeCharacter Символ, используемый для экранирования символов
+ * @public string $escapeCharacter Символ, используемый для экранирования
  * @public bool $allowMarkerEscape true: разрешает экранирование символа '?' как '??'. false: подстановка производится всегда
  * @public mixed $ignoreMarker Значение, используемое, как skip-маркер
  */
