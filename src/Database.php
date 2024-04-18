@@ -46,7 +46,7 @@ class Database implements DatabaseInterface
     /**
      * Разбивает строку на токены условных блоков, проверяя корректность выражений
      * @param string $query
-     * @return array
+     * @return array[]
      * @throws Exception
      */
     private function tokenizeQueryConditions(string $query): array
