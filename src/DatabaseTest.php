@@ -3,6 +3,7 @@
 namespace FpDbTest;
 
 use Exception;
+use FpDbTest\DatabaseInterface;
 
 class DatabaseTest
 {

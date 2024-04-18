@@ -6,11 +6,12 @@ namespace Tests\Unit;
 
 use Codeception\Test\Unit;
 use Exception;
-use pozitronik\FpDbTest\Database;
-use pozitronik\FpDbTest\DatabaseInterface;
+use FpDbTest\Database;
+use FpDbTest\DatabaseInterface;
 use Tests\Support\UnitTester;
 
 /**
+ * Тесты разбора условных блоков
  */
 class ConditionalQueryTest extends Unit
 {

@@ -3,12 +3,12 @@ declare(strict_types=1);
 
 
 use Codeception\Test\Unit;
-use pozitronik\FpDbTest\Database;
-use pozitronik\FpDbTest\DatabaseInterface;
+use FpDbTest\Database;
+use FpDbTest\DatabaseInterface;
 use Tests\Support\UnitTester;
 
 /**
- * @covers \pozitronik\FpDbTest\Database::tokenizeQueryConditions
+ * @covers \FpDbTest\Database::tokenizeQueryConditions
  */
 class TokenizerTest extends Unit
 {

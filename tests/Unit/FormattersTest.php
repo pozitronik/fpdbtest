@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use Codeception\Test\Unit;
-use pozitronik\FpDbTest\Database;
-use pozitronik\FpDbTest\DatabaseInterface;
+use FpDbTest\Database;
+use FpDbTest\DatabaseInterface;
 use ReflectionException;
 use Tests\Support\UnitTester;
 use TypeError;
