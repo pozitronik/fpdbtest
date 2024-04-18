@@ -50,7 +50,7 @@ jobs:
         run: composer install
 
       - name: Run psalm static analysis
-        run: vendor/bin/psalm run
+        run: vendor/bin/psalm
 
       - name: Run tests
         run: vendor/bin/codecept run
